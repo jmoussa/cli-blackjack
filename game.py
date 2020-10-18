@@ -21,6 +21,8 @@ class Deck:
     def draw_card(self):
         card_drawn = random.choice(self.deck)
         self.deck.remove(card_drawn)
+        if len(self.deck) == 0:
+            self.reshuffle()
         return card_drawn
 
     def reshuffle(self):
@@ -36,20 +38,35 @@ class Chipset:
         self.fiftys = 10
 
     def place_bet(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
-        pot["ones"] += ones
-        pot["fives"] += fives
-        pot["tens"] += tens
-        pot["twentys"] += twentys
-        pot["fiftys"] += fiftys
-        self.ones -= ones
-        self.fives -= fives
-        self.tens -= tens
-        self.twentys -= twentys
-        self.fiftys -= fiftys
+        bet_amount_ones = ones if ones > self.ones else self.ones
+        bet_amount_fives = fives if fives > self.fives else self.fives
+        bet_amount_tens = tens if tens > self.tens else self.tens
+        bet_amount_twentys = twentys if twentys > self.twentys else self.twentys
+        bet_amount_fiftys = fiftys if fiftys > self.fiftys else self.fiftys
+
+        pot["ones"] += bet_amount_ones
+        pot["fives"] += bet_amount_fives
+        pot["tens"] += bet_amount_tens
+        pot["twentys"] += bet_amount_twentys
+        pot["fiftys"] += bet_amount_fiftys
+        self.ones = self.ones - ones if ones < self.ones else 0
+        self.fives = self.fives - fives if fives < self.fives else 0
+        self.tens = self.tens - tens if tens < self.tens else 0
+        self.twentys = self.twentys - twentys if twentys < self.twentys else 0
+        self.fiftys = self.fiftys - fiftys if fiftys < self.fiftys else 0
+        return f"""
+            Betting: ---------------
+            1s  : {bet_amount_ones}
+            5s  : {bet_amount_fives}
+            10s : {bet_amount_tens}
+            20s : {bet_amount_twentys}
+            50s : {bet_amount_fiftys}
+            ----------------------
+            """
 
     def show_chips(self):
         return f"""
-            CHIPS: ---------------
+            REMAINING CHIPS: ---------------
             1s  : {self.ones}
             5s  : {self.fives}
             10s : {self.tens}
@@ -70,22 +87,18 @@ class Chipset:
 class Player:
     def __init__(self):
         self.chipset = Chipset()
-        self.winner_winner_chicken_dinner = False
         self.hand = []
 
     def place_bet(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
-        self.chipset.place_bet(ones, fives, tens, twentys, fiftys)
+        return self.chipset.place_bet(ones, fives, tens, twentys, fiftys)
 
     def call(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
         self.chipset.place_bet(ones, fives, tens, twentys, fiftys)
 
     def collect_winnings(self):
-        if self.winner_winner_chicken_dinner:
-            new_pot = self.chipset.collect_winnings()
-            global pot
-            pot = new_pot
-        else:
-            print("Sorry you haven't won.")
+        new_pot = self.chipset.collect_winnings()
+        global pot
+        pot = new_pot
 
 
 class Dealer(Player):
@@ -126,6 +139,10 @@ def format_bet(bet_amount):
     return bet_amount_body
 
 
+def print_hand(name, player: Player):
+    print(f"{name}: {[str(card.value) + ' of ' + card.suit for card in player.hand]}")
+
+
 dealer = Dealer()
 player1 = Player()
 
@@ -134,14 +151,39 @@ while True:
     playing = True
     dealer.deal_hands([player1])
     dealer_card = dealer.hand[0]
-    print(f"Dealer: {str(dealer_card.value) + ' of ' + dealer_card.suit }")
-    print(f"Player: {[str(card.value) + ' of ' + card.suit for card in player1.hand]}")
+    print_hand("Dealer", dealer)
+    print_hand("Player1", player1)
 
     while playing:
         print(player1.chipset.show_chips())
         bet_amount = input("Bet amount: ")
         bet_body = format_bet(bet_amount)
-        player1.place_bet(**bet_body)
+        p1_bet = player1.place_bet(**bet_body)
+        print(p1_bet)
         print(player1.chipset.show_chips())
+
+        p1_decision = input("What would you like to do (hit, stay): ")
+        if p1_decision.lower() == "hit":
+            while p1_decision == "hit":
+                dealer.hit(player1)
+                print_hand("Player1", player1)
+
+                if sum([card.value for card in player1.hand]) > 21:
+                    p1_decision = "bust"
+                    break
+                elif sum([card.value for card in player1.hand]) == 21:
+                    p1_decision = "win"
+                    break
+                else:
+                    p1_decision = input("What would you like to do (hit, stay): ")
+
+            if p1_decision == "bust":
+                print("BUST!")
+                print_hand("Player1", player1)
+            elif p1_decision == "win":
+                print("WINNER WINNER CHICKEN DINNER!")
+                player1.collect_winnings()
+                print(player1.chipset.show_chips())
+
         playing = False
     break
