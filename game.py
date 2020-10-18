@@ -30,19 +30,26 @@ class Deck:
 
 
 class Chipset:
-    def __init__(self):
-        self.ones = 10
-        self.fives = 10
-        self.tens = 10
-        self.twentys = 10
-        self.fiftys = 10
+    def __init__(self, dealer: bool = False):
+        if dealer:
+            self.ones = 100
+            self.fives = 100
+            self.tens = 100
+            self.twentys = 100
+            self.fiftys = 100
+        else:
+            self.ones = 10
+            self.fives = 10
+            self.tens = 10
+            self.twentys = 10
+            self.fiftys = 10
 
     def place_bet(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
-        bet_amount_ones = ones if ones > self.ones else self.ones
-        bet_amount_fives = fives if fives > self.fives else self.fives
-        bet_amount_tens = tens if tens > self.tens else self.tens
-        bet_amount_twentys = twentys if twentys > self.twentys else self.twentys
-        bet_amount_fiftys = fiftys if fiftys > self.fiftys else self.fiftys
+        bet_amount_ones = ones if ones < self.ones else self.ones
+        bet_amount_fives = fives if fives < self.fives else self.fives
+        bet_amount_tens = tens if tens < self.tens else self.tens
+        bet_amount_twentys = twentys if twentys < self.twentys else self.twentys
+        bet_amount_fiftys = fiftys if fiftys < self.fiftys else self.fiftys
 
         pot["ones"] += bet_amount_ones
         pot["fives"] += bet_amount_fives
@@ -85,9 +92,15 @@ class Chipset:
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, name: str = "Player1"):
+        self.name = name
         self.chipset = Chipset()
         self.hand = []
+        self.split_hand = []
+
+    def execute_split(self):
+        self.hand.remove(player1.hand[0])
+        self.split_hand.append(player1.hand[0])
 
     def place_bet(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
         return self.chipset.place_bet(ones, fives, tens, twentys, fiftys)
@@ -103,7 +116,9 @@ class Player:
 
 class Dealer(Player):
     def __init__(self):
+        self.name = "Dealer"
         self.deck = Deck()
+        self.chipset = Chipset(dealer=True)
 
     def deal_hands(self, players: [Player]):
         self.hand = []
@@ -121,17 +136,17 @@ class Dealer(Player):
 def format_bet(bet_amount):
     bet_amount = int(bet_amount)
 
-    fiftys = bet_amount // 50 if bet_amount > 50 else 0
-    after_fiftys = bet_amount % 50 if bet_amount > 50 else bet_amount
+    fiftys = bet_amount // 50 if bet_amount >= 50 else 0
+    after_fiftys = bet_amount % 50 if bet_amount >= 50 else bet_amount
 
-    twentys = after_fiftys // 20 if after_fiftys > 20 else 0
-    after_twentys = after_fiftys % 20 if after_fiftys > 20 else after_fiftys
+    twentys = after_fiftys // 20 if after_fiftys >= 20 else 0
+    after_twentys = after_fiftys % 20 if after_fiftys >= 20 else after_fiftys
 
-    tens = after_twentys // 10 if after_twentys > 10 else 0
-    after_tens = after_twentys % 10 if after_twentys > 10 else after_twentys
+    tens = after_twentys // 10 if after_twentys >= 10 else 0
+    after_tens = after_twentys % 10 if after_twentys >= 10 else after_twentys
 
-    fives = after_tens // 5 if after_tens > 5 else 0
-    after_fives = after_tens % 5 if after_tens > 5 else after_tens
+    fives = after_tens // 5 if after_tens >= 5 else 0
+    after_fives = after_tens % 5 if after_tens >= 5 else after_tens
 
     ones = after_fives // 1
 
@@ -139,8 +154,10 @@ def format_bet(bet_amount):
     return bet_amount_body
 
 
-def print_hand(name, player: Player):
-    print(f"{name}: {[str(card.value) + ' of ' + card.suit for card in player.hand]}")
+def print_hand(player: Player):
+    print(f"{player.name}: {[str(card.value) + ' of ' + card.suit for card in player.hand]}")
+    if len(player.split_hand) > 0:
+        print(f"{player.name}: {[str(card.value) + ' of ' + card.suit for card in player.split_hand]}")
 
 
 dealer = Dealer()
@@ -149,20 +166,34 @@ player1 = Player()
 # Start of the Game
 while True:
     playing = True
+    num_mapping = {"ones": 1, "fives": 5, "tens": 10, "twentys": 20, "fiftys": 50}
+    pot = {"ones": 0, "fives": 0, "tens": 0, "twentys": 0, "fiftys": 0}
+    print(f"Pot: {pot}")
     dealer.deal_hands([player1])
     dealer_card = dealer.hand[0]
-    print_hand("Dealer", dealer)
-    print_hand("Player1", player1)
+    print_hand(dealer)
+    print_hand(player1)
 
     while playing:
+        # TODO: Modify so it works for multiple players
+
+        # BETTING STAGE -------------------------------------------------------------
         print(player1.chipset.show_chips())
         bet_amount = input("Bet amount: ")
         bet_body = format_bet(bet_amount)
         p1_bet = player1.place_bet(**bet_body)
+
+        # dealer matches player's bet
+        dealer_bet = dealer.place_bet(**bet_body)
+        print("Dealer will match bet")
+
         print(p1_bet)
         print(player1.chipset.show_chips())
+        print(f"Pot: {sum([v*num_mapping[k] for k, v in pot.items()])}")
+        print_hand(player1)
 
-        p1_decision = input("What would you like to do (hit, stay): ")
+        # CARD HANDLING STAGE -------------------------------------------------------
+        p1_decision = input("What would you like to do (hit, stay or split): ")
         if p1_decision.lower() == "hit":
             while p1_decision == "hit":
                 dealer.hit(player1)
@@ -179,11 +210,15 @@ while True:
 
             if p1_decision == "bust":
                 print("BUST!")
-                print_hand("Player1", player1)
+                print_hand(player1)
+                playing = False
             elif p1_decision == "win":
                 print("WINNER WINNER CHICKEN DINNER!")
                 player1.collect_winnings()
                 print(player1.chipset.show_chips())
-
-        playing = False
-    break
+                playing = False
+        elif p1_decision.lower() == "split":
+            if player1.hand[0].value == player1.hand[1].value:
+                player1.execute_split()
+                print_hand(player1)
+        # FINAL BETTING STAGE --------------------------------------------------------
