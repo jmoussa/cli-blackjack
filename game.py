@@ -2,8 +2,10 @@ import random
 
 
 class Card:
-    def __init__(self, value, suit):
-        self.value = value
+    def __init__(self, name, suit):
+        value_mapping = {"ace": (11, 1), "king": 10, "queen": 10, "jack": 10}
+        self.name = name
+        self.value = name if name not in ("ace", "king", "queen", "jack") else value_mapping[name]
         self.suit = suit
         self.color = "red" if self.suit in ("heart", "diamonds") else "black"
 
@@ -119,6 +121,8 @@ class Dealer(Player):
         self.name = "Dealer"
         self.deck = Deck()
         self.chipset = Chipset(dealer=True)
+        self.hand = []
+        self.split_hand = []
 
     def deal_hands(self, players: [Player]):
         self.hand = []
@@ -154,10 +158,54 @@ def format_bet(bet_amount):
     return bet_amount_body
 
 
+def get_hands_result(hand: []):
+    result = []
+    sum = 0
+    sum2 = 0
+    for card in hand:
+        if card.name != "ace":
+            sum += card.value
+        else:
+            sum2 = sum
+            sum2 += 1
+            sum += 11
+
+    result.append(sum)
+    if sum2 != 0:
+        result.append(sum2)
+    return result
+
+
+def declare_winner(players: [Player]):
+    winner_matrix = {}
+    max_score = 0
+    for player in players:
+        winner_matrix[player] = []
+        player_results = get_hands_result(player.hand)
+        print(f"{player.name} results: {player_results}")
+
+        for r in player_results:
+            winner_matrix[player].append(r)
+        if player.split_hand and len(player.split_hand) > 0:
+            player_split_result = get_hands_result(player.split_hand)
+            for r in player_split_result:
+                winner_matrix[player].append(r)
+
+    for k, v in winner_matrix.items():
+        for score in v:
+            if score == 21:
+                winner = k
+                return winner
+            if score > max_score and score < 21:
+                max_score = score
+                winner = k
+    return winner
+
+
 def print_hand(player: Player):
-    print(f"{player.name}: {[str(card.value) + ' of ' + card.suit for card in player.hand]}")
+    print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.hand]}")
     if len(player.split_hand) > 0:
-        print(f"{player.name}: {[str(card.value) + ' of ' + card.suit for card in player.split_hand]}")
+        print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.split_hand]}")
 
 
 dealer = Dealer()
@@ -168,10 +216,10 @@ while True:
     playing = True
     num_mapping = {"ones": 1, "fives": 5, "tens": 10, "twentys": 20, "fiftys": 50}
     pot = {"ones": 0, "fives": 0, "tens": 0, "twentys": 0, "fiftys": 0}
-    print(f"Pot: {pot}")
+    print("RESET POT")
     dealer.deal_hands([player1])
     dealer_card = dealer.hand[0]
-    print_hand(dealer)
+    print(f"Dealer: {[str(dealer_card.name) + ' of ' + dealer_card.suit]}")
     print_hand(player1)
 
     while playing:
@@ -189,6 +237,7 @@ while True:
 
         print(p1_bet)
         print(player1.chipset.show_chips())
+        print(f"Pot: {pot}")
         print(f"Pot: {sum([v*num_mapping[k] for k, v in pot.items()])}")
         print_hand(player1)
 
@@ -197,7 +246,7 @@ while True:
         if p1_decision.lower() == "hit":
             while p1_decision == "hit":
                 dealer.hit(player1)
-                print_hand("Player1", player1)
+                print_hand(player1)
 
                 if sum([card.value for card in player1.hand]) > 21:
                     p1_decision = "bust"
@@ -211,14 +260,34 @@ while True:
             if p1_decision == "bust":
                 print("BUST!")
                 print_hand(player1)
+                dealer.collect_winnings()
                 playing = False
+                break
             elif p1_decision == "win":
                 print("WINNER WINNER CHICKEN DINNER!")
                 player1.collect_winnings()
                 print(player1.chipset.show_chips())
                 playing = False
+                break
         elif p1_decision.lower() == "split":
             if player1.hand[0].value == player1.hand[1].value:
                 player1.execute_split()
                 print_hand(player1)
+
         # FINAL BETTING STAGE --------------------------------------------------------
+        bet_amount = input("Bet amount: ")
+        bet_body = format_bet(bet_amount)
+        p1_bet = player1.place_bet(**bet_body)
+
+        # dealer matches player's bet
+        dealer_bet = dealer.place_bet(**bet_body)
+        print("Dealer will match bet")
+        print(f"Pot: {pot}")
+        print(f"Pot: {sum([v*num_mapping[k] for k, v in pot.items()])}")
+        # SHOW ------------------------------------------------------------------------
+        print_hand(player1)
+        print_hand(dealer)
+        winner = declare_winner([player1, dealer])
+        print(f"{winner.name} WINS!")
+        winner.collect_winnings()
+        playing = False
