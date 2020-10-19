@@ -161,18 +161,19 @@ def format_bet(bet_amount):
 def get_hands_result(hand: []):
     result = []
     sum = 0
-    sum2 = 0
+    has_ace = False
     for card in hand:
         if card.name != "ace":
             sum += card.value
         else:
-            sum2 = sum
-            sum2 += 1
-            sum += 11
-
-    result.append(sum)
-    if sum2 != 0:
-        result.append(sum2)
+            has_ace = True
+    if has_ace:
+        ace_sum_one = sum + 1
+        ace_sum_eleven = sum + 11
+        result.append(ace_sum_one)
+        result.append(ace_sum_eleven)
+    else:
+        result.append(sum)
     return result
 
 
@@ -206,6 +207,7 @@ def print_hand(player: Player):
     print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.hand]}")
     if len(player.split_hand) > 0:
         print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.split_hand]}")
+    print(f"Value: {get_hands_result(player.hand)}")
 
 
 dealer = Dealer()
@@ -227,7 +229,9 @@ while True:
 
         # BETTING STAGE -------------------------------------------------------------
         print(player1.chipset.show_chips())
-        bet_amount = input("Bet amount: ")
+        bet_amount = input("Bet amount, or check: ")
+        if bet_amount.lower() == "check":
+            bet_amount = 0
         bet_body = format_bet(bet_amount)
         p1_bet = player1.place_bet(**bet_body)
 
@@ -248,10 +252,12 @@ while True:
                 dealer.hit(player1)
                 print_hand(player1)
 
-                if sum([card.value for card in player1.hand]) > 21:
+                result = get_hands_result(player1.hand)
+
+                if all(i > 21 for i in result):
                     p1_decision = "bust"
                     break
-                elif sum([card.value for card in player1.hand]) == 21:
+                if 21 in result:
                     p1_decision = "win"
                     break
                 else:
@@ -275,7 +281,9 @@ while True:
                 print_hand(player1)
 
         # FINAL BETTING STAGE --------------------------------------------------------
-        bet_amount = input("Bet amount: ")
+        bet_amount = input("Bet amount, or check: ")
+        if bet_amount.lower() == "check":
+            bet_amount = 0
         bet_body = format_bet(bet_amount)
         p1_bet = player1.place_bet(**bet_body)
 
@@ -284,6 +292,7 @@ while True:
         print("Dealer will match bet")
         print(f"Pot: {pot}")
         print(f"Pot: {sum([v*num_mapping[k] for k, v in pot.items()])}")
+
         # SHOW ------------------------------------------------------------------------
         print_hand(player1)
         print_hand(dealer)
