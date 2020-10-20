@@ -1,6 +1,7 @@
 # CLI Blackjack Game
 
-I was bored so I made a quick CLI Blackjack game. Now you can look like you're doing work but really be playing blackjack!
+I was bored so I made a quick CLI Blackjack game. 
+Now you can look and feel like you're being productive but really just be playing blackjack!
 
 
 ### Requirements
