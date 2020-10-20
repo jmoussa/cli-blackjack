@@ -12,9 +12,7 @@ Now you can look and feel like you're being productive but really just be playin
 
 
 ### More improvements coming
-- Splitting out the codebase into more modular components
-- Eliminate redundancies
-- Code in basic strategy for the dealer
+- Code in basic strategy for the dealer (currently the dealer does not do anything except match bets)
 - Multiplayer via socket connection?
 - Turn into a simulator and run analysis on gameplay?
 
