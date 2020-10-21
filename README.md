@@ -11,10 +11,15 @@ Now you can look and feel like you're being productive but really just be playin
     - `conda activate blackjack`
 
 
-### More improvements coming
+### Todo
+- Fix bug/add feature that will automatically rearrange chips to cover bet (currently only starting at top denominations not aggregating smaller chips to cover non-existent large denominations)
 - Code in basic strategy for the dealer (currently the dealer does not do anything except match bets)
+
+
+### More improvements coming
 - Multiplayer via socket connection?
 - Turn into a simulator and run analysis on gameplay?
+
 
 
 ### To Run:
