@@ -41,7 +41,7 @@ class Chipset:
             10s : {bet_amount_tens}
             20s : {bet_amount_twentys}
             50s : {bet_amount_fiftys}
-            ----------------------
+            ----------------------\n\n
             """,
             pot,
         )
@@ -57,7 +57,7 @@ class Chipset:
             ----------------------
             """
 
-    def collect_winnings(self):
+    def collect_winnings(self, pot):
         self.ones += pot["ones"]
         self.fives += pot["fives"]
         self.tens += pot["tens"]
