@@ -16,11 +16,18 @@ class Player:
     def place_bet(self, pot: dict, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
         return self.chipset.place_bet(pot, ones, fives, tens, twentys, fiftys)
 
+    def get_total(self):
+        num_mapping = {"ones": 1, "fives": 5, "tens": 10, "twentys": 20, "fiftys": 50}
+        s = 0
+        for denomination, count in vars(self.chipset).items():
+            s += num_mapping[denomination] * count
+        return s
+
     def call(self, ones: int = 0, fives: int = 0, tens: int = 0, twentys: int = 0, fiftys: int = 0):
         self.chipset.place_bet(ones, fives, tens, twentys, fiftys)
 
-    def collect_winnings(self):
-        new_pot = self.chipset.collect_winnings()
+    def collect_winnings(self, current_pot):
+        new_pot = self.chipset.collect_winnings(current_pot)
         global pot
         pot = new_pot
 
