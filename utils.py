@@ -1,25 +1,90 @@
 from player import Player
+from card import Card
+
+num_mapping = {"ones": 1, "fives": 5, "tens": 10, "twentys": 20, "fiftys": 50}
+reverse_num_mapping = {1: "ones", 5: "fives", 10: "tens", 20: "twentys", 50: "fiftys"}
 
 
-def format_bet(pot, bet_amount):
-    bet_amount = int(bet_amount)
+def construct_optimal_bet(bet_amount: int, chipset: list, memo: dict = {}):
 
-    fiftys = bet_amount // 50 if bet_amount >= 50 else 0
-    after_fiftys = bet_amount % 50 if bet_amount >= 50 else bet_amount
+    if f"{bet_amount}-{chipset}" in memo:
+        return memo[f"{bet_amount}-{chipset}"]
+    if bet_amount == 0:
+        return []
+    if bet_amount < 0:
+        return None
 
-    twentys = after_fiftys // 20 if after_fiftys >= 20 else 0
-    after_twentys = after_fiftys % 20 if after_fiftys >= 20 else after_fiftys
+    for i in list(reversed(range(len(chipset)))):
+        remainder = bet_amount - chipset[i]
+        last_chip = chipset[i]
+        index_after = i + 1
+        new_chipset = chipset[index_after:]
+        remainder_result = construct_optimal_bet(remainder, new_chipset, memo)
+        if remainder_result is not None:
+            remainder_result.append(last_chip)
+            memo[f"{bet_amount}-{chipset}"] = remainder_result
+            return memo[f"{bet_amount}-{chipset}"]
 
-    tens = after_twentys // 10 if after_twentys >= 10 else 0
-    after_tens = after_twentys % 10 if after_twentys >= 10 else after_twentys
+    memo[f"{bet_amount}-{chipset}"] = None
+    return memo[f"{bet_amount}-{chipset}"]
 
-    fives = after_tens // 5 if after_tens >= 5 else 0
-    after_fives = after_tens % 5 if after_tens >= 5 else after_tens
 
-    ones = after_fives // 1
+def expand_chipset(chipset: dict):
+    res = []
+    for d, c in chipset.items():
+        subset = [num_mapping[d] for i in range(c)]
+        for i in subset:
+            res.append(i)
+    return res
 
-    bet_amount_body = {"pot": pot, "ones": ones, "fives": fives, "tens": tens, "twentys": twentys, "fiftys": fiftys}
-    return bet_amount_body
+
+def compress_chipset(chipset: list):
+    chipset_dict = {}
+    for chip in chipset:
+        if reverse_num_mapping[chip] in chipset_dict:
+            chipset_dict[reverse_num_mapping[chip]] += 1
+        else:
+            chipset_dict[reverse_num_mapping[chip]] = 1
+
+    return chipset_dict
+
+
+def decision_generator(hand: list, dealer_up_card: Card) -> str:
+    # based on the hand, decide to hit, stay or split:
+    """
+    hand is a list of card objects
+    {'name': str, 'value': str, 'suit': str, 'color': str}
+    """
+    sum = 0
+    sum_ace_hi = 0
+    for card in hand:
+        if type(card.value) == int:
+            sum += card.value
+            sum_ace_hi += card.value
+        elif type(card.value) == tuple or card.name == "ace":
+            sum += 1
+            sum_ace_hi += 11
+        else:
+            sum += 10
+            sum_ace_hi += 10
+
+    # the   d e c i d e r
+    # coding in basic strategy... it's an ongoing process
+    if (
+        sum >= 17
+        or ((sum >= 9 and sum_ace_hi >= 19) and (sum <= 11 and sum_ace_hi <= 21))  # ace, 8-10
+        or (((sum <= 16 or sum_ace_hi <= 16) and (sum >= 13 or sum_ace_hi >= 113)) and (dealer_up_card.value <= 6))
+    ):
+        decision = "stay"
+    elif (((sum <= 16 or sum_ace_hi <= 16) and (sum >= 13 or sum_ace_hi >= 113)) and (dealer_up_card.value >= 7)) or (
+        (sum >= 3 or sum_ace_hi >= 13) and (sum <= 7 or sum_ace_hi <= 17) or (sum >= 5 and sum <= 8)
+    ):
+        decision = "hit"
+    elif ([card.name for card in hand].count("ace") > 1) or ([card.value for card in hand].count(8) > 1):
+        decision = "split"
+    else:
+        decision = "stay"
+    return decision
 
 
 def get_hands_result(hand: []):
@@ -67,8 +132,11 @@ def declare_winner(players: [Player]):
     return winner
 
 
-def print_hand(player: Player):
-    print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.hand]}")
-    if len(player.split_hand) > 0:
-        print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.split_hand]}")
-    print(f"Value: {get_hands_result(player.hand)}")
+def print_hand(player: Player, override=False):
+    if player.name != "Dealer" or override:
+        print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.hand]}")
+        if len(player.split_hand) > 0:
+            print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.split_hand]}")
+        print(f"Value: {get_hands_result(player.hand)}")
+    else:
+        print(f"{player.name}: {[str(card.name) + ' of ' + card.suit for card in player.hand[1:]]}")
